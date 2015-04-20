@@ -87,14 +87,43 @@ public class SingleThreadedServerActivity extends Activity {
 			try {
 				serverSocket = new ServerSocket(Constants.SERVER_PORT);
 				while (isRunning) {
-					Socket socket = serverSocket.accept();
-					Log.v(Constants.TAG, "Connection opened with "+socket.getInetAddress()+":"+socket.getLocalPort());
-					PrintWriter printWriter = Utilities.getWriter(socket);
-					printWriter.println(serverTextEditText.getText().toString());
-					socket.close();
-					Log.v(Constants.TAG, "Connection closed");
+					final Socket socket = serverSocket.accept();
+					
+					Thread userThread = new Thread(new Runnable() {
+						
+						@Override
+						public void run() {
+						
+							try {
+								Thread.sleep(3000);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							Log.v(Constants.TAG, "Connection opened with "+socket.getInetAddress()+":"+socket.getLocalPort());
+							PrintWriter printWriter = null;
+							try {
+								printWriter = Utilities.getWriter(socket);
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							printWriter.println(serverTextEditText.getText().toString());
+							try {
+								socket.close();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							Log.v(Constants.TAG, "Connection closed");
+						}
+						
+					});
+					
+					userThread.start();
+					Log.d("out", "out");
 				}
-			} catch (IOException ioException) {
+			} catch (Exception ioException) {
 				Log.e(Constants.TAG, "An exception has occurred: "+ioException.getMessage());
 				if (Constants.DEBUG) {
 					ioException.printStackTrace();
@@ -102,6 +131,8 @@ public class SingleThreadedServerActivity extends Activity {
 			}
 		}
 	}
+	
+	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -129,5 +160,12 @@ public class SingleThreadedServerActivity extends Activity {
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+	
+	@Override
+	protected void onDestroy() {
+		
+		super.onDestroy();
+		singleThreadedServer.stopServer();
 	}
 }

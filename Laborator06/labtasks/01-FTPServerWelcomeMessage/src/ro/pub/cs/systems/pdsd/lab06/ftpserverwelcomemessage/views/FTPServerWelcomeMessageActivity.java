@@ -1,7 +1,11 @@
 package ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.views;
 
+import java.io.BufferedReader;
+import java.net.Socket;
+
 import ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.R;
 import ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.general.Constants;
+import ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.general.Utilities;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
@@ -32,6 +36,55 @@ public class FTPServerWelcomeMessageActivity extends Activity {
 				// - the value does not start with Constants.FTP_MULTILINE_START_CODE2
 				// append the line to the welcomeMessageTextView text view content (on the UI thread!!!)
 				// close the socket
+				
+				Socket sock = new Socket(FTPServerAddressEditText.getText().toString(), Constants.FTP_PORT);
+				
+				BufferedReader br = Utilities.getReader(sock);
+				
+				final StringBuilder message = new StringBuilder("");
+				final String line = br.readLine();
+				
+				if(line == null) {
+					
+					welcomeMessageTextView.post(new Runnable() {
+						
+						@Override
+						public void run() {
+							welcomeMessageTextView.setText("Am citit null de pe socket");
+							
+						}
+					});
+					return;
+				}
+				
+				String token = null;
+				message.append(line);
+				Log.d("read_line", line);
+				Log.d("substr", line.subSequence(0, 4).toString());
+				if(line.subSequence(0, 4).toString().equals("220-")) {
+					
+					message.delete(0, 4);
+					token = br.readLine();
+					
+					while(!Constants.FTP_MULTILINE_END_CODE1.equals(token) 
+							&& !token.startsWith(Constants.FTP_MULTILINE_END_CODE2)) {
+						
+						message.append(token);
+						token = br.readLine();
+					}
+				}
+				
+				Log.d("message", message.toString());
+				welcomeMessageTextView.post(new Runnable() {
+					
+					@Override
+					public void run() {
+						
+						welcomeMessageTextView.setText(message.toString());
+					}
+				});
+				
+				sock.close();
 
 			} catch (Exception exception) {
 				Log.e(Constants.TAG, "An exception has occurred: "+exception.getMessage());
